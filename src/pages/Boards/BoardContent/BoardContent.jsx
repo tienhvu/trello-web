@@ -36,7 +36,7 @@ function BoardContent({ board }) {
   const sensors = useSensors(mouseSensor, touchSensor)
 
   const [orderedColumns, setOrderedColumns] = useState([])
-  //Cung 1 thoi ddiem chi co 1 phan tu dang duoc keo(column hoac card)
+  //Cung 1 thoi diem chi co 1 phan tu dang duoc keo(column hoac card)
   const [activeDragItemId, setActiveDragItemId] = useState([])
 
   const [activeDragItemType, setActiveDragItemType] = useState([])
