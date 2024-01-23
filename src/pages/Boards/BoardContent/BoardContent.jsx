@@ -4,19 +4,24 @@ import ListColumns from './ListColumns/ListColumns'
 import { mapOrder } from '~/utils/sorts'
 import {
   DndContext,
-  PointerSensor,
+  // PointerSensor,
   MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
   DragOverlay,
   defaultDropAnimationSideEffects,
-  closestCorners
+  pointerWithin,
+  closestCorners,
+  // closestCenter,
+  // rectIntersection,
+  getFirstCollision
+
 } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
-import { useEffect, useState } from 'react'
-import { cloneDeep } from 'lodash'
-
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { cloneDeep, isEmpty } from 'lodash'
+import { generatePlaceholderCard } from '~/utils/formatters'
 import Column from './ListColumns/Column/Column'
 import Card from './ListColumns/Column/ListCards/Card/Card'
 
@@ -46,7 +51,8 @@ function BoardContent({ board }) {
 
   const [oldColumnWhenDraggingCard, setOldColumnWhenDraggingCard] = useState(null)
 
-
+  //Diem va cham cuoi cung
+  const lastOverId = useRef(null)
   useEffect(() => {
     setOrderedColumns(mapOrder(board?.columns, board?.columnOrderIds, '_id'))
   }, [board])
@@ -84,6 +90,11 @@ function BoardContent({ board }) {
         //xoa card khoi cai column active
         nextActiveColumn.cards = nextActiveColumn.cards.filter(card => card._id !== activeDraggingCardId )
 
+        //Them placeholder card neu nhu column rong
+        if (isEmpty(nextActiveColumn.cards)) {
+          
+          nextActiveColumn.cards = [generatePlaceholderCard(nextActiveColumn)]
+        }
         //Cap nhat lai cardOderIds
         nextActiveColumn.cardOrderIds = nextActiveColumn.cards.map(card => card._id)
       }
@@ -98,6 +109,9 @@ function BoardContent({ board }) {
         }
         //Them card dang keo vao overColumn theo vi tri index moi
         nextOverColumn.cards = nextOverColumn.cards.toSpliced(newCardIndex, 0, rebuild_activeDraggingCardData)
+        //XOa placeholdercard di neu no dang ton tai
+        nextOverColumn.cards = nextOverColumn.cards.filter(card => !card.FE_PlaceholderCard)
+
         nextOverColumn.cardOrderIds = nextOverColumn.cards.map(card => card._id)
       }
       return nextColumns
@@ -232,12 +246,43 @@ function BoardContent({ board }) {
       }
     })
   }
+  const collisionDetectionStrategy = useCallback((args) => {
+    if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) {
+      return closestCorners({ ...args })
+    }
+    //Tim cac diem va cham voi con tro
+    const pointerIntersections = pointerWithin(args)
+    if (!pointerIntersections?.length) return
+    // const intersections = !!pointerIntersections?.length ? pointerIntersections : rectIntersection(args)
+
+    //Tim overId dau tien trong intersections
+    let overId = getFirstCollision(pointerIntersections, 'id')
+    if (overId) {
+      const checkColumn = orderedColumns.find(column => column._id === overId)
+      if (checkColumn) {
+        overId = closestCorners({
+          ...args,
+          droppableContainers: args.droppableContainers.filter(container => {
+            return container.id !== overId &&
+            checkColumn?.cardOrderIds?.includes(container.id)
+
+          })
+        })[0]?.id
+      }
+      lastOverId.current = overId
+      return [{ id : overId }]
+    }
+    //neu overId la null thi tra ve mang rong tranh crash trang
+    return lastOverId.current ? [{ id: lastOverId.current }] : []
+  }, [activeDragItemType])
 
   return (
     <DndContext
       sensors = {sensors}
       //Thuat taon phat hien va cham
-      collisionDetection={closestCorners}
+      // collisionDetection={closestCorners}
+
+      collisionDetection={collisionDetectionStrategy}
       onDragStart={handleDragStart}
       onDragOver={(handleDragOver)}
       onDragEnd={handleDragEnd}
