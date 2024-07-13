@@ -8,7 +8,8 @@ Currently, two official plugins are available:
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
 # UI
--Dark Mode
+
+- Dark Mode
 <img width="931" alt="image" src="https://github.com/user-attachments/assets/6db25d79-535d-4d85-a0cf-c4abf7f2aec2">
 
 - Light Mode
